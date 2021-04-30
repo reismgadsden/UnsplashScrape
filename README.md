@@ -1,7 +1,7 @@
 # Welcome to the Unsplash Scrape Visualizer Documentation
 
 By: Reis Gadsden\
-Version: v2.0.1\
+Version: v2.0.2\
 <a href="https://github.com/reismgadsden/UnsplashScrape">GitHub</a>
 
 # 1. Overview
