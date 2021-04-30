@@ -31,7 +31,7 @@ Additional features include
     * Creating a perfect "camera" based of view averages
 
 @author: Reis Gadsden
-@version: 2.0.1
+@version: v2.0.2
 """
 
 # necessary imports
@@ -247,7 +247,7 @@ def perf_cam(df):
 
 
 if __name__ == "__main__":
-    warnings.simplefilter('ignore')
+    warnings.simplefilter('ignore')  # suppress warnings, there is a warning about causing issues with deprecated method
     print("Welcome to the Unsplash Scraper Visualizer")
     while True:
         use_csv = input("Would you like to start new scape or use a csv from the last scrape."
