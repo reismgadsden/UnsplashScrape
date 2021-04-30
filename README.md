@@ -59,11 +59,11 @@ Additional features include
       * ui.WebDriverWait
       * expected_conditions
       
-#3. Running the Program
+# 3. Running the Program
 Running the program is simple. You can simply run <i>UnsplashScrapeVisualizer.py</i>, given that you have installed the necessary imports. On start you will have the option to either load data from a included csv, or start a new scrape (WARNING: NEW SCRAPE TAKES AN AVERAGE OF 45 MINUTES TO COMPLETE FOR 1000 IMAGES)
 <br/>
 <br/>
 If you are only looking for the data rather then the visualizations, you can run <i>UnsplashScrape.py</i>. You might have to change a few lines in order to get the number of pages and data output that you want but it shouldn't be too much.
 
-#4. Data Output
+# 4. Data Output
 All data is outputted to a folder called data, in there you will find all plots in a png format as well as a csv created from the data.
