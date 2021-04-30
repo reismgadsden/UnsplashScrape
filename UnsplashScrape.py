@@ -5,7 +5,7 @@ This program will crawl the landing page of unsplash.com, a creative commons ima
 and collected attributes about the images found there.
 
 @author: Reis Gadsden
-@version: v0.0.1
+@version: v2.0.2
 
 Attributes Scraped:
  - Image page url
@@ -59,7 +59,6 @@ import pandas as pd
 # main class that contains the logic for crawling unsplash
 class UnsplashScrape:
     base = ""  # main page
-    attrs = dict()  # dictionary that contains all attributes
     crawl_amount = 0  # total pages to be crawled
     driver = ""  # initialize driver variable
     main_window = 0  # value that will hold the window value of the main page
@@ -70,6 +69,8 @@ class UnsplashScrape:
     # and makes call to main data collection function
     def __init__(self, main_site, crawl_pages):
         self.base = main_site
+
+        # empty lists to hold all data
         self.img_page = []
         self.img_hvr_txt = []
         self.photographer = []
@@ -88,9 +89,12 @@ class UnsplashScrape:
         self.count = []
 
         # get and validate user input
+        self.check_input = True
         while True:
             if int(crawl_pages) > self.MAX_PAGES or int(crawl_pages) < 1:
                 print("Requested Crawl Amount Too Large (Limit is " + str(self.MAX_PAGES) + ")")
+                self.check_input = False
+                break
             else:
                 print("Okay gathering " + str(crawl_pages) + " item(s) from " + self.base + ".")
                 self.crawl_amount = int(crawl_pages)
@@ -105,6 +109,8 @@ class UnsplashScrape:
 
                 # call to main data collection function
                 self.get_attrs()
+
+                # create a dictionary that can be converted to a DataFrame
                 self.data = {
                     "img_page": self.img_page,
                     "img_hvr_txt": self.img_hvr_txt,
@@ -123,7 +129,11 @@ class UnsplashScrape:
                     "img_resolution": self.img_resolution,
                     "count": self.count
                 }
+
+                # convert to dataframe
                 self.df = pd.DataFrame.from_dict(self.data)
+
+                # save dataframe as csv
                 self.df.to_csv("data/data.csv", index=False)
                 break
 
@@ -186,8 +196,6 @@ class UnsplashScrape:
         # opens photo page up in new tab
         self.driver.execute_script('window.open("' + url + '");')
 
-        # data collection container
-
         # switches driver form main window to new window
         for window in self.driver.window_handles:
             if window != self.main_window:
@@ -205,7 +213,6 @@ class UnsplashScrape:
             if val.text.strip() != "" and val.text.strip() != "Available for hire":
                 self.photographer.append(val.get_attribute("href").replace("https://unsplash.com/@", ""))
                 break
-
 
         # loop to find the image url
         # thorough checking to make sure the right link is gathered
@@ -297,6 +304,7 @@ class UnsplashScrape:
         else:
             self.aperture.append(float(check_aperture.replace("\u0192/", "")))
 
+        # create shutter speed as a float instead of fraction in string format
         check_shutter_speed = self.driver.find_element_by_xpath(
             '//*[text()="Shutter Speed"]/following-sibling::dd').text
         if check_shutter_speed == "--":
@@ -321,11 +329,24 @@ class UnsplashScrape:
             check_img_res = check_img_res.replace(" × ", ", ")
             self.img_resolution.append(check_img_res)
 
+        # add 1 to count in order to keep a total of images when combining rows and such later on
         self.count.append(1)
-
 
 
 # will run the scraper if this is main file and it is not being imported
 if __name__ == "__main__":
-    us = UnsplashScrape("https://unsplash.com/", 2)
-    print(us.df)
+    while True:
+        crawl_amount = input("Enter the number you would like to crawl too.")
+        try:
+            crawl_amount = int(crawl_amount)
+        except ValueError:
+            print("Invalid Input, Try Again!")
+        else:
+            if crawl_amount > 0:
+                us = UnsplashScrape("https://unsplash.com/", crawl_amount)
+                if us.check_input:
+                    break
+                else:
+                    print("Please enter a new value.")
+            else:
+                print("Invalid Input, Try Again!")
