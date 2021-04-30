@@ -46,8 +46,6 @@ Additional Resources:
 """
 
 # necessary imports
-import json
-import re
 import time
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
@@ -55,6 +53,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.action_chains import ActionChains
+import pandas as pd
 
 
 # main class that contains the logic for crawling unsplash
@@ -64,22 +63,37 @@ class UnsplashScrape:
     crawl_amount = 0  # total pages to be crawled
     driver = ""  # initialize driver variable
     main_window = 0  # value that will hold the window value of the main page
+    MAX_PAGES = 1000  # max number of pages allowed to be crawled
 
     # initialization function of the UnsplashScrape class
     # handles user input, sets values to class wide variables, sets Firefox profile,
     # and makes call to main data collection function
-    def __init__(self, main_site):
+    def __init__(self, main_site, crawl_pages):
         self.base = main_site
+        self.img_page = []
+        self.img_hvr_txt = []
+        self.photographer = []
+        self.img_url = []
+        self.location = []
+        self.summary = []
+        self.views = []
+        self.downloads = []
+        self.camera_make = []
+        self.camera_model = []
+        self.focal_len = []
+        self.aperture = []
+        self.shutter_speed = []
+        self.iso = []
+        self.img_resolution = []
+        self.count = []
 
         # get and validate user input
         while True:
-            self.crawl_amount = input("Please enter the number of items you would like to retrieve (limit 1,000): ")
-            if bool(re.match(r'^[0-9]+$', self.crawl_amount)) is not True or int(self.crawl_amount) > 1000 \
-                    or int(self.crawl_amount) < 1:
-                print("Please enter a valid integer in the range of 1 - 1,000!")
+            if int(crawl_pages) > self.MAX_PAGES or int(crawl_pages) < 1:
+                print("Requested Crawl Amount Too Large (Limit is " + str(self.MAX_PAGES) + ")")
             else:
-                print("Okay gathering " + self.crawl_amount + " item(s) from " + self.base + ".")
-                self.crawl_amount = int(self.crawl_amount)
+                print("Okay gathering " + str(crawl_pages) + " item(s) from " + self.base + ".")
+                self.crawl_amount = int(crawl_pages)
 
                 # initialize selenium with custom profile
                 profile = webdriver.FirefoxProfile()
@@ -91,6 +105,26 @@ class UnsplashScrape:
 
                 # call to main data collection function
                 self.get_attrs()
+                self.data = {
+                    "img_page": self.img_page,
+                    "img_hvr_txt": self.img_hvr_txt,
+                    "photographer": self.photographer,
+                    "img_url": self.img_url,
+                    "location": self.location,
+                    "summary": self.summary,
+                    "views": self.views,
+                    "downloads": self.downloads,
+                    "camera_make": self.camera_make,
+                    "camera_model": self.camera_model,
+                    "focal_len": self.focal_len,
+                    "aperture": self.aperture,
+                    "shutter_speed": self.shutter_speed,
+                    "iso": self.iso,
+                    "img_resolution": self.img_resolution,
+                    "count": self.count
+                }
+                self.df = pd.DataFrame.from_dict(self.data)
+                self.df.to_csv("data/data.csv", index=False)
                 break
 
     # main data collection function
@@ -114,17 +148,16 @@ class UnsplashScrape:
         # gets urls from loaded elements
         urls = [fig.get_attribute('href') for fig in figures[0:self.crawl_amount]]
 
+        i = 1
         for url in urls:
-            print(str(len(self.attrs)+1) + ". Collecting info from: " + url)
+            print(str(i) + ". Collecting info from: " + url)
             # initialize page data container
-            collected_attrs = dict()
             # only attribute that does not require you to go to the actual photo page
-            collected_attrs["image_hover_text"] = self.get_image_hover(url)
+            self.img_hvr_txt.append(self.get_image_hover(url))
 
             # collects all attributes from photo page and merges them with page data container
-            collected_attrs.update(self.get_info(url))
-            self.attrs[url] = collected_attrs
-
+            self.img_page.append(url)
+            self.get_info(url)
             # closes the newly opened window and switches driver back to main window
             for window in self.driver.window_handles:
                 if window != self.main_window:
@@ -132,9 +165,7 @@ class UnsplashScrape:
                     self.driver.close()
                     self.driver.switch_to.window(self.main_window)
                     break
-
-        # dumps final dictionary to a .json file
-        self.dump_to_json()
+            i += 1
 
         # closes the driver
         self.driver.quit()
@@ -144,7 +175,11 @@ class UnsplashScrape:
         element_to_go_to = self.driver.find_element_by_xpath("//*[@href='" + url.replace(self.base, "/") + "']")
         self.driver.execute_script("arguments[0].scrollIntoView();", element_to_go_to)
         ActionChains(self.driver).move_to_element(element_to_go_to).perform()
-        return element_to_go_to.get_attribute('title')
+
+        if element_to_go_to.get_attribute('title') is None or element_to_go_to.get_attribute('title') == "":
+            return None
+        else:
+            return element_to_go_to.get_attribute('title')
 
     # method that gathers data from the individual photo pages
     def get_info(self, url):
@@ -152,7 +187,6 @@ class UnsplashScrape:
         self.driver.execute_script('window.open("' + url + '");')
 
         # data collection container
-        collection_info = dict()
 
         # switches driver form main window to new window
         for window in self.driver.window_handles:
@@ -169,7 +203,9 @@ class UnsplashScrape:
         # thorough checking to make sure the right thing is gathered
         for val in self.driver.find_elements_by_css_selector("a[href^='/@']"):
             if val.text.strip() != "" and val.text.strip() != "Available for hire":
-                collection_info["photographer"] = val.text.strip()
+                self.photographer.append(val.get_attribute("href").replace("https://unsplash.com/@", ""))
+                break
+
 
         # loop to find the image url
         # thorough checking to make sure the right link is gathered
@@ -179,32 +215,35 @@ class UnsplashScrape:
             for val in self.driver.find_elements_by_css_selector("img"):
                 if val.get_attribute('itemprop') != "thumbnailUrl" and "1pixel.gif" not in val.get_attribute("src")\
                         and val.get_attribute("role") is None:
-                    collection_info["img_url"] = val.get_attribute('src')
+                    self.img_url.append(val.get_attribute('src'))
+                    break
         except StaleElementReferenceException:
             WebDriverWait(self.driver, 10).until(
                 ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'img')))
             for val in self.driver.find_elements_by_css_selector("img"):
                 if val.get_attribute('itemprop') != "thumbnailUrl" and "1pixel.gif" not in val.get_attribute("src")\
                         and val.get_attribute("role") is None:
-                    collection_info["img_url"] = val.get_attribute('src')
+                    self.img_url.append(val.get_attribute('src'))
+                    break
 
         # attempts to get a location if one is provided
         # have to handle and exception here because there is only one possible element that could match
         # so we have to handle the exception that is thrown if it is not present
         try:
-            collection_info["location"] = self.driver.find_element_by_css_selector("a[href^='/s/photos'] > span").text
+            self.location.append(self.driver.find_element_by_css_selector("a[href^='/s/photos'] > span").text)
         except NoSuchElementException:
-            collection_info["location"] = "N/A"
+            self.location.append(None)
 
         # collect the summary if present
         # the only other <p> tags are ones leading to related content
         # so we can check for those
         # might cause and issue where the word Related is in the summary
-        collection_info["summary"] = "N/A"
+        check_sum = None
         for val in self.driver.find_elements_by_css_selector("p"):
             if "Related" not in val.text:
-                collection_info["summary"] = val.text
+                check_sum = val.text
                 break
+        self.summary.append(check_sum)
 
         # click the info button
         try:
@@ -227,63 +266,66 @@ class UnsplashScrape:
         # it has a title for what it is in the dt tag with some text so we can just
         # get the second sibling of its parent node
 
-        collection_info["views"] = int(self.driver.find_element_by_xpath
-                                       ('//*[text()="Views"]/../following-sibling::dd/span[1]').text.replace(",", ""))
+        self.views.append(int((self.driver.find_element_by_xpath('//*[text()="Views"]/../following-sibling::dd/span[1]')
+                          .text.replace(",", ""))))
 
-        collection_info["downloads"] = int(
+        self.downloads.append(int(
             self.driver.find_element_by_xpath('//*[text()="Downloads"]/../following-sibling::dd/span[1]')
-                .text.replace(",", ""))
+                .text.replace(",", "")))
 
-        collection_info["camera_make"] = self.driver.find_element_by_xpath(
-            '//*[text()="Camera Make"]/following-sibling::dd').text
-        if collection_info["camera_make"] == "--":
-            collection_info["camera_make"] = "N/A"
-
-        collection_info["camera_model"] = self.driver.find_element_by_xpath(
-            '//*[text()="Camera Model"]/following-sibling::dd').text
-        if collection_info["camera_model"] == "--":
-            collection_info["camera_model"] = "N/A"
-
-        collection_info["focal_len"] = self.driver.find_element_by_xpath(
-            '//*[text()="Focal Length"]/following-sibling::dd').text
-        if collection_info["focal_len"] == "--":
-            collection_info["focal_len"] = "N/A"
-
-        collection_info["aperture"] = self.driver.find_element_by_xpath(
-            '//*[text()="Aperture"]/following-sibling::dd').text
-        if collection_info["aperture"] == "--":
-            collection_info["aperture"] = "N/A"
-
-        collection_info["shutter_speed"] = self.driver.find_element_by_xpath(
-            '//*[text()="Shutter Speed"]/following-sibling::dd').text
-        if collection_info["shutter_speed"] == "--":
-            collection_info["shutter_speed"] = "N/A"
-
-        collection_info["iso"] = self.driver.find_element_by_xpath(
-            '//*[text()="ISO"]/following-sibling::dd').text
-        if collection_info["iso"] == "--":
-            collection_info["iso"] = "N/A"
-
-        collection_info["img_resolution"] = self.driver.find_element_by_xpath(
-            '//*[text()="Dimensions"]/following-sibling::dd').text
-        if collection_info["img_resolution"] == "--":
-            collection_info["img_resolution"] = "N/A"
-
-        # return the final dictionary
-        return collection_info
-
-    def dump_to_json(self):
-        # attempts to dump to json file
-        try:
-            with open('data.json', 'w') as fp:
-                json.dump(self.attrs, fp, indent=4)
-            fp.close()
-        except json.JSONDecodeError:
-            print("Error dumping to JSON file :(")
+        check_camera_make = self.driver.find_element_by_xpath('//*[text()="Camera Make"]/following-sibling::dd').text
+        if check_camera_make == "--":
+            self.camera_make.append(None)
         else:
-            print("\nSuccessfully dumped dictionary to a JSON file!")
+            self.camera_make.append(check_camera_make)
+
+        check_camera_model = self.driver.find_element_by_xpath('//*[text()="Camera Model"]/following-sibling::dd').text
+        if check_camera_model == "--":
+            self.camera_model.append(None)
+        else:
+            self.camera_model.append(check_camera_model)
+
+        check_focal_len = self.driver.find_element_by_xpath('//*[text()="Focal Length"]/following-sibling::dd').text
+        if check_focal_len == "--":
+            self.focal_len.append(None)
+        else:
+            self.focal_len.append(float(check_focal_len.replace("mm", "")))
+
+        check_aperture = self.driver.find_element_by_xpath('//*[text()="Aperture"]/following-sibling::dd').text
+        if check_aperture == "--":
+            self.aperture.append(None)
+        else:
+            self.aperture.append(float(check_aperture.replace("\u0192/", "")))
+
+        check_shutter_speed = self.driver.find_element_by_xpath(
+            '//*[text()="Shutter Speed"]/following-sibling::dd').text
+        if check_shutter_speed == "--":
+            self.shutter_speed.append(None)
+        else:
+            check_shutter_speed = check_shutter_speed.replace("s", "")
+            if len(check_shutter_speed.split("/")) == 2:
+                check_shutter_speed = check_shutter_speed.split('/')
+                check_shutter_speed = float(check_shutter_speed[0]) / float(check_shutter_speed[1])
+            self.shutter_speed.append(float(check_shutter_speed))
+
+        check_iso = self.driver.find_element_by_xpath('//*[text()="ISO"]/following-sibling::dd').text
+        if check_iso == "--":
+            self.iso.append(None)
+        else:
+            self.iso.append(int(check_iso))
+
+        check_img_res = self.driver.find_element_by_xpath('//*[text()="Dimensions"]/following-sibling::dd').text
+        if check_img_res == "--":
+            self.img_resolution.append(None)
+        else:
+            check_img_res = check_img_res.replace(" × ", ", ")
+            self.img_resolution.append(check_img_res)
+
+        self.count.append(1)
+
 
 
 # will run the scraper if this is main file and it is not being imported
 if __name__ == "__main__":
-    UnsplashScrape("https://unsplash.com/")
+    us = UnsplashScrape("https://unsplash.com/", 2)
+    print(us.df)

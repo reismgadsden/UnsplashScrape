@@ -1,13 +1,12 @@
-# UnsplashScrape Documentation
+# Welcome to the Unsplash Scrape Visualizer Documentation
 
-By: Reis Gadsden
-Version: v1.0.1
+By: Reis Gadsden\
+Version: v2.0.0\
+<a href="https://github.com/reismgadsden/UnsplashScrape">GitHub</a>
 
-# This documentation is incomplete and does not cover everything except an initial setup and describing programs fuctionality.
-
-# 1. Purpose
-The purpose of this documentation is to crawl and gather several bits of data from the royalty free image sharing website <b><a href = "https://unsplash.com">unsplash.com</a></b>. It will gather said data and store it in a formatted .json file, data.json.
-*Gathered attributes
+#1. Overview
+This program gathers 15 different attributes for a specified number of photos from the royalty free image hosting website, Unsplash. There are two major parts of the program. The first is the actual crawling and gathering of data, done via Selenium. The second is the visualization of data gathered from the crawl utilizing Pandas, Numpy, and MatPlotLib.
+* Gathered attributes
   * Image Page URL - Each image has its own unique webpage
   * Photographer - the account name of the person which the photo belongs to
   * URL of the Image - the direct url of the image (img.src)
@@ -24,10 +23,29 @@ The purpose of this documentation is to crawl and gather several bits of data fr
     * Shutter Speed
     * ISO
     
+<br/>
+Visualizations created during the crawl include:
+<ul>
+<li>Top 10 Users by View</li>
+<li>Average Views and Downloads by Camera Make and Model</li>
+<li>Graphs showing Camera Settings</li>
+</ul>
+Additional features include
+<ul>
+<li>Viewing the most popular image</li>
+<li>Creating a perfect "camera" based of view averages</li>
+</ul>
+   
 # 2. Neccesary Imports
-* json
-* re
+* Pandas
+* datetime
 * time
+* NumPy
+* warnings
+* webbrowser
+* Matplotlib
+    * pyplot
+    * ticker
 * selenium
   * webdriver
     * common
@@ -39,9 +57,13 @@ The purpose of this documentation is to crawl and gather several bits of data fr
       * action_chains.ActionChains
     * support
       * ui.WebDriverWait
-      * expected_conditions as ec
+      * expected_conditions
       
-# 3. First Time Running
-Upon the first time running a prompt in the console will display
-<pre><code>Please enter the number of items you would like to retrieve (limit 1,000): </code></pre>
-You may enter any valid integer value up to 1,000. If you would like to retrieve more items, you can simply change the value of MAX_PAGES to whatever you would like. It was kept at 1,000 for brevity.
+#3. Running the Program
+Running the program is simple. You can simply run <i>UnsplashScrapeVisualizer.py</i>, given that you have installed the necessary imports. On start you will have the option to either load data from a included csv, or start a new scrape (WARNING: NEW SCRAPE TAKES AN AVERAGE OF 45 MINUTES TO COMPLETE FOR 1000 IMAGES)
+<br/>
+<br/>
+If you are only looking for the data rather then the visualizations, you can run <i>UnsplashScrape.py</i>. You might have to change a few lines in order to get the number of pages and data output that you want but it shouldn't be too much.
+
+#4. Data Output
+All data is outputted to a folder called data, in there you will find all plots in a png format as well as a csv created from the data.
