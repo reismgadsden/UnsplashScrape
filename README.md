@@ -4,7 +4,7 @@ By: Reis Gadsden\
 Version: v2.0.0\
 <a href="https://github.com/reismgadsden/UnsplashScrape">GitHub</a>
 
-#1. Overview
+# 1. Overview
 This program gathers 15 different attributes for a specified number of photos from the royalty free image hosting website, Unsplash. There are two major parts of the program. The first is the actual crawling and gathering of data, done via Selenium. The second is the visualization of data gathered from the crawl utilizing Pandas, Numpy, and MatPlotLib.
 * Gathered attributes
   * Image Page URL - Each image has its own unique webpage
